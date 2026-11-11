@@ -1,0 +1,56 @@
+Teams reply membership report
+Verified with read-only Microsoft Graph calls on 2026-11-10.
+
+Failing chat:
+19:9fb8a278-8552-49e0-8c9a-099a66221816_bf023b72-3d66-48ee-8590-f7088201b650@unq.gbl.spaces
+
+Delegated reply account verified through Graph /me:
+Display name: Gopi krishnan
+Object ID: de1a0433-c6b7-4c0c-8383-c34e090c9542
+UPN: gopi.krishnan@sstlab.in
+
+Discovered roster (all returned pages):
+Display name: Afrin banu
+User object ID: 9fb8a278-8552-49e0-8c9a-099a66221816
+UPN: Afrin.banu@sstlab.in
+Tenant ID: d7ab1225-4649-4cb3-abd5-bc732bed3203
+
+Conclusion: The delegated reply account is not a participant in this chat.
+Application access to tenant messages does not grant the delegated user roster
+membership. That is why reading worked while sending returned AclCheckFailed.
+Chat IDs and their apparent embedded identifiers are not reliable membership
+evidence; this conclusion is based on GET /chats/{chat-id}/members.
+
+Required fix:
+Use a conversation containing Gopi krishnan, add this account to an appropriate
+group chat, or obtain the delegated reply token for an actual participant.
+Changing GRAPH_SENDER_USER_ID without signing in as that user is insufficient.
+Self-authored messages from the configured reply account are deliberately ignored
+to prevent reply loops. Test with another participant sending a new message.
+
+Implemented behavior:
+- Every send validates token identity and scopes, then reads the complete roster.
+- Membership is compared using directory userId and tenantId, not opaque member id.
+- Non-members raise SenderNotInChatError; the notification consumer logs an
+  actionable warning and continues without calling the message POST endpoint.
+- Failed or malformed roster reads block sending rather than assuming membership.
+- Startup checks decoded token oid against the configured sender, then verifies
+  the live /me identity and logs the reply display name and object ID.
+- /health exposes reply_account_ready as the startup identity-check result.
+- get_chat_members(chat_id) returns membership ID, directory user ID, display name,
+  email, tenant ID and directory-resolved UPN (null if profile lookup is unavailable).
+- Roster reads use application authentication; sends use delegated authentication.
+  Existing application Chat.Read.All supports membership reads. The least-privilege
+  dedicated roster permission is application ChatMember.Read.All.
+
+Local read-only diagnostic (does not send messages):
+.venv\Scripts\python.exe -m scripts.diagnose_chat "<chat-id>"
+
+Validation: All 87 offline tests passed. Live /me, roster and member directory
+lookups succeeded. No live send was attempted; the actual chat remains ineligible.
+
+Operational limits:
+Membership can change between the GET and POST; Graph remains authoritative and
+send errors are propagated without blindly replaying POST. Startup validation runs
+in the background to keep webhook validation available. A successful startup
+identity check does not imply membership in every tenant conversation.

@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+requests
+msal
+python-dotenv
+openai
+pydantic>=2,<3

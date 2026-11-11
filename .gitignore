@@ -1,0 +1,9 @@
+.env
+.evn
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+data/
+logs/*.log*
+.test-artifacts/
