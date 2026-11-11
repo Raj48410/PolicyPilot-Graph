@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PolicyPilot</title>
+  <link rel="icon" href="data:,">
+  <script src="https://res.cdn.office.net/teams-js/2.19.0/js/MicrosoftTeams.min.js"></script>
+  <style>
+    :root { font-family: system-ui, sans-serif; color: #182338; background: #f4f6fa; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 800px; margin: auto; padding: 24px; display: flex; flex-direction: column; min-height: 100dvh; }
+    header { display: flex; gap: 16px; align-items: center; justify-content: space-between; }
+    h1 { font-size: 26px; margin: 0; } p { line-height: 1.6; }
+    button { border: 0; border-radius: 8px; padding: 12px 18px; background: #2563eb; color: white; cursor: pointer; font: inherit; }
+    button:disabled { opacity: .5; cursor: default; }
+    #auth { background: white; padding: 16px; border: 1px solid #dce2ed; border-radius: 12px; }
+    #auth p { margin: 8px 0; } code { font-size: 20px; letter-spacing: 2px; }
+    #messages { flex: 1; padding: 20px 0; overflow-wrap: anywhere; }
+    .message { padding: 14px 18px; border-radius: 12px; background: white; border: 1px solid #dce2ed; margin: 12px 0; white-space: pre-wrap; line-height: 1.6; }
+    .user { margin-left: 15%; background: #e6efff; } .message strong { display: block; font-size: 13px; margin-bottom: 4px; }
+    form { display: flex; gap: 10px; align-items: stretch; }
+    textarea { flex: 1; min-width: 0; resize: vertical; padding: 12px; border: 1px solid #a9b6cc; border-radius: 8px; font: inherit; }
+    #status { min-height: 24px; font-size: 14px; } .note { color: #526078; font-size: 13px; }
+    @media(prefers-color-scheme:dark) { :root { color: #edf1f8; background: #151b27; } #auth,.message,textarea { background: #202a3a; color: #edf1f8; } .user { background: #243c65; } .note { color: #bbc7db; } a { color: #9dbfff; } }
+  </style>
+</head>
+<body>
+<main>
+  <header><h1>PolicyPilot</h1><button id="login" type="button">Sign in with Microsoft</button><button id="logout" type="button" hidden>Sign out</button></header>
+  <p>Ask your policy assistant a question.</p>
+  <section id="auth" hidden aria-label="Microsoft sign-in"><p>Open <a href="https://microsoft.com/devicelogin" target="_blank" rel="noopener noreferrer">Microsoft sign-in</a> and enter this code:</p><code id="code"></code><p>Keep this page open while you sign in.</p></section>
+  <section id="messages" role="log" aria-live="polite" aria-label="Conversation"></section>
+  <p id="status" role="status">Sign in to start chatting.</p>
+  <form id="form"><textarea id="question" rows="2" maxlength="4000" placeholder="Ask a policy question…" aria-label="Your question" required disabled></textarea><button id="send" disabled>Send</button></form>
+  <p class="note">Policy retrieval currently uses demo context. Messages stay on this page until you reload or sign out. Each question is answered independently.</p>
+</main>
+<script>
+  const el = id => document.getElementById(id);
+  let session = '', timer, ready = false;
+  const status = message => { el('status').textContent = message; };
+  function addMessage(name, text, user = false) {
+    const node = document.createElement('div'); node.className = 'message' + (user ? ' user' : '');
+    const label = document.createElement('strong'); label.textContent = name;
+    const body = document.createElement('span'); body.textContent = text;
+    node.append(label, body); el('messages').append(node); node.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+  }
+  function reset() {
+    clearTimeout(timer); session = ''; ready = false;
+    el('login').hidden = false; el('login').disabled = false; el('logout').hidden = true;
+    el('auth').hidden = true; el('question').disabled = true; el('send').disabled = true;
+    el('messages').replaceChildren(); el('question').value = '';
+  }
+  async function api(path, body) {
+    const response = await fetch('/api/' + path, {method: 'POST', cache: 'no-store', headers: {
+      'Content-Type': 'application/json', ...(session ? {'Authorization': 'Bearer ' + session} : {})
+    }, body: JSON.stringify(body || {})});
+    const data = await response.json();
+    if (!response.ok) {
+      if (response.status === 401) reset();
+      throw new Error(typeof data.detail === 'string' ? data.detail : 'Please check your input and try again.');
+    }
+    return data;
+  }
+  el('login').onclick = async () => {
+    el('login').disabled = true; status('Starting Microsoft sign-in…');
+    try {
+      const result = await api('login'); session = result.session;
+      el('code').textContent = result.code; el('auth').hidden = false;
+      status('Complete Microsoft sign-in using the code above.');
+      async function poll() {
+        try {
+          const result = await api('login/status');
+          if (result.status !== 'ready') { timer = setTimeout(poll, 5000); return; }
+          ready = true; el('auth').hidden = true; el('login').hidden = true; el('logout').hidden = false;
+          el('question').disabled = false; el('send').disabled = false;
+          status('Signed in as ' + result.name); el('question').focus();
+          addMessage('PolicyPilot', 'Hello! What would you like to know about company policies?');
+        } catch (error) { reset(); status(error.message); }
+      }
+      timer = setTimeout(poll, Math.max(result.interval, 5) * 1000);
+    } catch (error) { reset(); status(error.message); }
+  };
+  el('logout').onclick = async () => {
+    try { await api('logout'); } finally { reset(); status('Signed out.'); }
+  };
+  el('form').onsubmit = async event => {
+    event.preventDefault(); const question = el('question').value.trim();
+    if (!question || !ready || el('send').disabled) return;
+    addMessage('You', question, true); el('question').value = ''; el('send').disabled = true;
+    el('logout').disabled = true; status('Thinking…');
+    try { const result = await api('chat', {message: question}); addMessage('PolicyPilot', result.answer); status('Ready for your next question.'); }
+    catch (error) { status(error.message); if (ready) el('question').value = question; }
+    finally { el('send').disabled = !ready; el('logout').disabled = false; }
+  };
+  el('question').onkeydown = event => {
+    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); el('form').requestSubmit(); }
+  };
+  if (window.microsoftTeams) microsoftTeams.app.initialize().catch(() => {});
+</script>
+</body>
+</html>

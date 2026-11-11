@@ -5,3 +5,4 @@ msal
 python-dotenv
 openai
 pydantic>=2,<3
+PyJWT[crypto]>=2.10,<3

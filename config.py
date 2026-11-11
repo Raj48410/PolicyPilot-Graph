@@ -12,6 +12,8 @@ class Settings:
     tenant_id: str = field(default_factory=lambda: os.getenv("TENANT_ID", ""))
     client_id: str = field(default_factory=lambda: os.getenv("CLIENT_ID", ""))
     client_secret: str = field(default_factory=lambda: os.getenv("CLIENT_SECRET", ""), repr=False)
+    copilot_api_audience: str = field(default_factory=lambda: os.getenv("COPILOT_API_AUDIENCE", ""))
+    copilot_api_scope: str = field(default_factory=lambda: os.getenv("COPILOT_API_SCOPE", "access_as_user"))
     notification_url: str = field(default_factory=lambda: os.getenv("GRAPH_NOTIFICATION_URL", ""))
     client_state: str = field(default_factory=lambda: os.getenv("GRAPH_CLIENT_STATE", ""), repr=False)
     subscription_minutes: int = field(default_factory=lambda: int(os.getenv("GRAPH_SUBSCRIPTION_MINUTES", "45")))

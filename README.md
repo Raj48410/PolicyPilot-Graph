@@ -139,6 +139,40 @@ For production use one process without --reload for this local-storage scaffold.
 
 ## 7. Validate the webhook
 
+### Chat inside the PolicyPilot tab
+
+Open `/` locally or through the configured HTTPS tunnel and select **Sign in
+with Microsoft**. Open the Microsoft sign-in link, enter the displayed device
+code, and sign in with your own tenant account. The input becomes available
+after verification. Enter sends a question; Shift+Enter inserts a newline.
+Answers appear inside the tab and are not posted to Teams conversations.
+
+The existing Entra registration must allow public client flows and delegated
+`User.Read` consent (the same device-login prerequisite used by `scripts.login`).
+Each user signs in independently; the reply account's `.env` token is never sent
+to the page. Sign-in uses MSAL, checks the tenant, and verifies the user through
+Graph `/me` before resolving their directory groups for every question.
+Sessions are opaque, kept in browser memory and server memory, and expire within
+an hour. Reloading, signing out, or restarting the server requires signing in
+again. Run one server process; multiple workers require a shared session store.
+Pending and active sessions are capped at 20. API responses disable caching.
+
+The conversation is a page-local display; questions are answered independently.
+Policy retrieval remains mock data, and authorization uses the existing demo
+group-name mapping. Before connecting real company documents, enforce document
+access during retrieval and replace display-name roles with immutable group IDs.
+
+If Graph reports that the app has reached its `CHATS/GETALLMESSAGES` subscription
+limit, an existing tenant-wide subscription is still active. Startup first restores
+local metadata, or discovers and reuses a remote subscription whose app, webhook
+URL, client state and delivery settings match. Keep `data/subscription.json` across
+restarts and run one subscription-maintenance process for this application.
+If the tunnel URL or client state changed, stop the old instance and let its
+subscription expire before creating a replacement. Alternatively, inspect
+`GET /subscriptions` using this application's credentials and explicitly delete
+the obsolete subscription with `DELETE /subscriptions/{id}`. The service does not
+automatically delete subscriptions or take over a different webhook configuration.
+
 Open the actual public URL followed by `/graph/webhook?validationToken=abc123`.
 It must return exactly `abc123` as plain text with HTTP 200. Also test POST:
 

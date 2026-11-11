@@ -1,0 +1,26 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/copilot/plugin/v2.2/schema.json",
+  "schema_version": "v2.2",
+  "name_for_human": "PolicyPilot policy answers",
+  "description_for_human": "Get policy answers from the authenticated PolicyPilot backend.",
+  "namespace": "policypilot",
+  "functions": [
+    {
+      "name": "get_policy_answer",
+      "description": "Ask the PolicyPilot backend a company policy question on behalf of the signed-in user. Return the backend's answer faithfully and disclose when retrieval uses mock context."
+    }
+  ],
+  "runtimes": [
+    {
+      "type": "OpenApi",
+      "auth": {
+        "type": "OAuthPluginVault",
+        "reference_id": "OAUTH_REGISTRATION_ID_REQUIRED"
+      },
+      "spec": {
+        "url": "openapi.json"
+      },
+      "run_for_functions": ["get_policy_answer"]
+    }
+  ]
+}

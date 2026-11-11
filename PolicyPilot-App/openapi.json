@@ -1,0 +1,37 @@
+{
+  "openapi": "3.0.3",
+  "info": {"title": "PolicyPilot policy API", "version": "1.0.0"},
+  "servers": [{"url": "https://c2sz676m-8000.inc1.devtunnels.ms"}],
+  "paths": {
+    "/api/copilot/answer": {
+      "post": {
+        "operationId": "get_policy_answer",
+        "summary": "Get an authorized policy answer from PolicyPilot",
+        "description": "Answers a policy question using the signed-in user's server-resolved role. This endpoint does not send Teams messages or create tickets.",
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {
+            "type": "object", "additionalProperties": false,
+            "required": ["question"],
+            "properties": {"question": {"type": "string", "minLength": 1, "maxLength": 4000, "description": "The user's policy question, including relevant context."}}
+          }}}
+        },
+        "responses": {
+          "200": {
+            "description": "PolicyPilot's answer",
+            "content": {"application/json": {"schema": {
+              "type": "object", "required": ["answer", "retrieval_mode"],
+              "properties": {"answer": {"type": "string"}, "retrieval_mode": {"type": "string", "enum": ["mock"]}}
+            }}}
+          },
+          "401": {"description": "Access token missing, invalid or expired"},
+          "403": {"description": "Required delegated scope missing"},
+          "429": {"description": "Service at capacity"},
+          "503": {"description": "Authentication is not configured or backend unavailable"}
+        },
+        "security": [{"bearerAuth": []}]
+      }
+    }
+  },
+  "components": {"securitySchemes": {"bearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}}}
+}

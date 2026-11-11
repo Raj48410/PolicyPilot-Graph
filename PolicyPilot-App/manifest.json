@@ -1,0 +1,55 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.21/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.21",
+  "version": "1.0.3",
+  "id": "6bc16e59-5988-4530-87bb-9a72fe7abab6",
+  "developer": {
+    "name": "com.sstlab.policypilot",
+    "websiteUrl": "https://YOUR_POLICYPILOT_URL",
+    "privacyUrl": "https://YOUR_POLICYPILOT_URL/privacy",
+    "termsOfUseUrl": "https://YOUR_POLICYPILOT_URL/terms"
+  },
+  "name": {
+    "short": "PolicyPilot",
+    "full": "PolicyPilot AI Assistant"
+  },
+  "description": {
+    "short": "Enterprise AI assistant powered by Microsoft Graph and Azure OpenAI.",
+    "full": "PolicyPilot helps employees access company policies, create support tickets, retrieve knowledge from SharePoint, and interact with AI-powered workflows using Microsoft Graph and Azure OpenAI."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#2563EB",
+  "copilotAgents": {
+    "declarativeAgents": [
+      {
+        "id": "policypilot",
+        "file": "declarativeAgent.json"
+      }
+    ]
+  },
+  "staticTabs": [
+    {
+      "entityId": "home",
+      "name": "PolicyPilot",
+      "contentUrl": "https://c2sz676m-8000.inc1.devtunnels.ms",
+      "websiteUrl": "https://c2sz676m-8000.inc1.devtunnels.ms",
+      "scopes": [
+        "personal",
+        "groupChat"
+      ],
+      "context": [
+        "personalTab",
+        "privateChatTab"
+      ]
+    }
+  ],
+  "permissions": [
+    "identity"
+  ],
+  "validDomains": [
+    "c2sz676m-8000.inc1.devtunnels.ms"
+  ]
+}

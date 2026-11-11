@@ -4,8 +4,9 @@ import hmac
 import logging
 from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timezone
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 from ai.openai_service import OpenAIService
 from config import Settings, settings
@@ -17,6 +18,8 @@ from services.polling_service import PollingService
 from services.subscription_service import SubscriptionService
 from services.teams_service import SenderNotInChatError, TeamsService
 from services.user_service import UserService
+from services.tab_chat import chat_router
+from services.copilot_api import copilot_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -51,9 +54,13 @@ def create_app(config: Settings = settings) -> FastAPI:
     async def maintain_subscription(application: FastAPI) -> None:
         # The HTTP server must start BEFORE Graph calls back to validate the URL.
         await asyncio.sleep(1)
-        current: dict | None = await subscriptions.load_subscription()
+        current: dict | None = None
+        restore_needed = True
         while True:
             try:
+                if restore_needed:
+                    current = await subscriptions.load_subscription()
+                    restore_needed = False
                 if current:
                     expires = datetime.fromisoformat(current["expirationDateTime"].replace("Z", "+00:00"))
                     if expires <= datetime.now(timezone.utc):
@@ -136,6 +143,28 @@ def create_app(config: Settings = settings) -> FastAPI:
 
     application = FastAPI(title="PolicyPilot Graph Edition", lifespan=lifespan)
     application.state.processor = processor
+    application.include_router(chat_router(config, graph, processor))
+    application.include_router(copilot_router(config, processor))
+
+    @application.middleware("http")
+    async def prevent_chat_caching(request: Request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/api/") or request.url.path == "/":
+            response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @application.get("/", response_class=HTMLResponse)
+    async def home() -> HTMLResponse:
+        return HTMLResponse(
+            content=(Path(__file__).parent / "static" / "chat.html").read_text(encoding="utf-8"),
+            headers={"Content-Security-Policy":
+                     "frame-ancestors https://teams.microsoft.com "
+                     "https://*.teams.microsoft.com https://*.cloud.microsoft;"},
+        )
+
+    @application.get("/favicon.ico", include_in_schema=False)
+    async def favicon() -> Response:
+        return Response(status_code=204)
 
     @application.get("/health")
     async def health() -> dict:

@@ -1,0 +1,56 @@
+PolicyPilot Teams personal-tab package
+
+Files
+PolicyPilot-App/manifest.json
+PolicyPilot-App/color.png
+PolicyPilot-App/outline.png
+PolicyPilot.zip (these three files at ZIP root)
+
+Icon specifications
+color.png: 192 x 192 pixels, PNG RGBA, opaque #2563EB background,
+white shield and P mark. Accent color: #2563EB.
+outline.png: 32 x 32 pixels, PNG RGBA, white shield and P mark on a
+fully transparent background. Both actual icons are included.
+
+Before deployment
+1. Replace APP_ID_PLACEHOLDER in manifest.json with a stable, unique UUID.
+   This identifies the Teams app; no bot registration is required.
+2. Replace YOUR_POLICYPILOT_URL with your deployed HTTPS hostname.
+   contentUrl and websiteUrl include https://; validDomains contains only
+   the hostname, without scheme, path, or port.
+3. Publish real privacy and terms pages at the configured developer URLs,
+   or change those URLs to your existing HTTPS pages.
+4. The contentUrl must serve a real Teams-compatible web page that initializes
+   the Teams JavaScript SDK and permits Teams framing. The current FastAPI
+   backend does not implement a personal-tab page at /. A manifest alone does
+   not add that UI. The Graph webhook URL is not a tab UI URL.
+5. The description is the requested product description. SharePoint retrieval,
+   tickets, and AI workflows described there are not all implemented in this
+   backend. Align the description with available features before distribution.
+
+Packaging and installation
+1. After replacing placeholders, rebuild the ZIP in PowerShell from the project root:
+   Compress-Archive -Path .\PolicyPilot-App\manifest.json,.\PolicyPilot-App\color.png,.\PolicyPilot-App\outline.png -DestinationPath .\PolicyPilot.zip -Force
+   Do not zip the parent folder. The ZIP root must contain exactly the three files.
+2. In Teams, go to Apps > Manage your apps > Upload an app > Upload a custom app,
+   then select PolicyPilot.zip. Tenant policy must permit custom app upload.
+   For organization distribution, an administrator can upload the package in
+   Teams admin center > Teams apps > Manage apps and make it available to users.
+3. Users select PolicyPilot and Add. Administrators can use app setup policies
+   to install/pin it for the intended users.
+4. Open PolicyPilot from Apps or the Teams app bar to open the personal tab.
+
+Validation and scope
+Manifest version: 1.17. Personal static tab only. No bots, compose extensions,
+meeting extensions, messaging endpoint, or Bot Framework configuration.
+The supplied manifest is a TEMPLATE: APP_ID_PLACEHOLDER is not a valid GUID,
+and YOUR_POLICYPILOT_URL is not a deployment hostname. These requested
+placeholders must be replaced before final schema validation and upload.
+identity is a Teams permission, not Microsoft Graph OAuth/admin consent.
+Installing the personal tab does not grant Graph access, configure SSO,
+create a chat contact, or change the backend reply identity.
+
+References
+https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json
+https://learn.microsoft.com/en-us/microsoftteams/platform/tabs/how-to/tab-requirements
+https://learn.microsoft.com/en-us/microsoftteams/platform/concepts/deploy-and-publish/apps-upload
